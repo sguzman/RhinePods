@@ -132,9 +132,14 @@ Local Docker image builds need **no Docker Hub login**.
   in the RhinePods repository root. The second command compiles the frontend
   into a **builder-only Docker image**; it does not start or replace a
   container and does not modify the server.
-- **Still pending:** full Rust/Trunk compilation and real
-  Firefox/MPRIS `playerctl metadata` verification on eosbox.
-  Do not merge to RhinePods `main` or deploy on eosbox until verified.
+- **Build verification COMPLETE:** Rust/Trunk 1.99 compiled the feature
+  branch frontend in GitHub Actions run `43642240155` (successful); Node
+  Media Session regression tests also passed. A separate PinePods 0.9.2
+  compatibility build succeeded in run `43643575697` with an approximately
+  6 MB compressed frontend. No local Rust/Docker toolchain downloads needed.
+- **Still pending:** real Firefox/MPRIS `playerctl metadata` verification on
+  eosbox after an explicitly approved deployment. Do not merge into RhinePods
+  `main` until runtime behavior is verified.
 - Keep the existing `my-srv` 0.9.2 experimental patch dormant; do not
   accidentally deploy it as a substitute for the reviewed RhinePods branch.
 - **Compatibility guard discovered 2026-11-14:** upstream `main` is 44 commits
@@ -164,3 +169,16 @@ branch/diff and the actual relevant Rust code. Record verified outcomes here
 so the next agent can continue without relying on chat memory. Changes
 should be small, understandable and reversible. No reboot or service
 restart without explicit user consent.
+
+
+### Small-download deployment experiment
+
+- `docs/RHINEPODS_092_TEST.md` documents the approval-gated offline image
+  overlay, verified artifact SHA-256, and rollback.
+- `scripts/build-092-prebuilt.fish` fetches only the GitHub Actions 0.9.2
+  frontend (~6 MB), or accepts its manually downloaded ZIP, verifies SHA-256,
+  then runs an offline Docker `COPY`-only build on the cached official image.
+  It does not start or restart any service.
+- `scripts/overlay-092-prebuilt.yaml` is an opt-in image-only override.
+  Never apply without approval; existing Compose and PostgreSQL/Valkey are
+  unchanged. GitHub artifact expires 2026-11-21.
