@@ -1,0 +1,65 @@
+name: RhinePods — media metadata web build
+
+# This is a build experiment for the one in-progress feature.
+# No Docker builds, image pushes, deployments, releases, or credentials.
+on:
+  push:
+    branches:
+      - feature/media-session-metadata
+    paths:
+      - "web/**"
+      - ".github/workflows/media-session-web.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  browser-frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - name: Check out RhinePods
+        uses: actions/checkout@v4
+
+      - name: Test browser Media Session helper (no npm)
+        run: node web/tests/media_session_metadata.mjs
+
+      - name: Install Rust 1.99 with browser WASM target
+        run: |
+          rustup toolchain install 1.99.0 --profile minimal --target wasm32-unknown-unknown
+          rustup default 1.99.0
+          rustc --version
+
+      - name: Install upstream-compatible Trunk 0.21.14
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.local/bin"
+          url="https://github.com/trunk-rs/trunk/releases/download/v0.21.14/trunk-x86_64-unknown-linux-musl.tar.gz"
+          curl --fail --location --silent --show-error "$url" --output /tmp/trunk.tar.gz
+          curl --fail --location --silent --show-error "$url.sha256" --output /tmp/trunk.tar.gz.sha256
+          printf '%s  %s\n' "$(cat /tmp/trunk.tar.gz.sha256)" "/tmp/trunk.tar.gz" | sha256sum --check -
+          tar -xzf /tmp/trunk.tar.gz -C "$HOME/.local/bin" trunk
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          "$HOME/.local/bin/trunk" --version
+
+      - name: Compile Rust/Yew frontend only
+        working-directory: web
+        env:
+          RUSTFLAGS: '--cfg=web_sys_unstable_apis --cfg getrandom_backend="wasm_js"'
+        run: trunk build --features server_build --release
+
+      - name: Report actual compiled/download size
+        run: |
+          du -sh web/dist
+          tar -czf rhinepods-web-dist.tar.gz -C web/dist .
+          du -h rhinepods-web-dist.tar.gz
+          stat -c 'Compressed frontend archive: %s bytes' rhinepods-web-dist.tar.gz
+
+      - name: Store optional small frontend artifact (no release)
+        uses: actions/upload-artifact@v4
+        with:
+          name: rhinepods-web-metadata
+          path: rhinepods-web-dist.tar.gz
+          if-no-files-found: error
+          retention-days: 7
