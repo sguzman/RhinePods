@@ -39,6 +39,51 @@ use yew::prelude::*;
 use yew::{function_component, html, Callback, Html};
 use yew_router::history::{BrowserHistory, History};
 use yewdux::prelude::*;
+use wasm_bindgen::prelude::wasm_bindgen;
+
+// PinePods knows episode details; publish them for Firefox's Media Session
+// integration rather than leaving MPRIS with only the generic webpage title.
+// This deliberately does not install media-key handlers or alter playback.
+#[wasm_bindgen(inline_js = r#"
+export function rhinepodsSetMediaMetadata(title, artist, album, artworkUrl) {
+    if (typeof navigator === "undefined" || !("mediaSession" in navigator) ||
+        typeof window === "undefined" || typeof window.MediaMetadata !== "function") {
+        return;
+    }
+
+    const artwork = [];
+    if (artworkUrl) {
+        try {
+            const url = new URL(artworkUrl, document.baseURI);
+            if (["https:", "http:", "blob:"].includes(url.protocol)) {
+                artwork.push({ src: url.href });
+            }
+        } catch (_) {
+            // Invalid chapter art must not prevent text metadata.
+        }
+    }
+
+    try {
+        navigator.mediaSession.metadata = new window.MediaMetadata({
+            title, artist, album, artwork
+        });
+    } catch (_) {
+        // Unsupported/incomplete browser Media Session APIs are optional.
+    }
+}
+
+export function rhinepodsClearMediaMetadata() {
+    if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
+        try { navigator.mediaSession.metadata = null; } catch (_) {}
+    }
+}
+"#)]
+extern "C" {
+    #[wasm_bindgen(js_name = rhinepodsSetMediaMetadata)]
+    fn rhinepods_set_media_metadata(title: &str, artist: &str, album: &str, artwork_url: &str);
+    #[wasm_bindgen(js_name = rhinepodsClearMediaMetadata)]
+    fn rhinepods_clear_media_metadata();
+}
 
 #[derive(Properties, PartialEq, Debug, Clone)]
 pub struct AudioPlayerProps {
@@ -371,6 +416,37 @@ pub fn audio_player(props: &AudioPlayerProps) -> Html {
                 || ()
             },
         );
+    }
+
+    // Keep browser/OS metadata synchronized with the currently displayed
+    // episode and its chapter artwork. The effect runs only when one of these
+    // values changes, not on every second of playback.
+    {
+        let title = if props.title.trim().is_empty() {
+            props.episode.episodetitle.clone()
+        } else {
+            props.title.clone()
+        };
+        let artwork = if current_chapter_image.is_empty() {
+            props.artwork_url.clone()
+        } else {
+            (*current_chapter_image).clone()
+        };
+        use_effect_with(
+            (
+                title,
+                props.episode.author.clone(),
+                props.episode.podcastname.clone(),
+                artwork,
+            ),
+            |(title, artist, album, artwork_url)| {
+                rhinepods_set_media_metadata(title, artist, album, artwork_url);
+                || ()
+            },
+        );
+
+        // Clear on player unmount, not on an episode/chapter transition.
+        use_effect_with((), |_| || rhinepods_clear_media_metadata());
     }
 
     // Get episode chapters if available
