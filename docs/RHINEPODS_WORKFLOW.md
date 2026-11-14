@@ -137,6 +137,24 @@ Local Docker image builds need **no Docker Hub login**.
   Do not merge to RhinePods `main` or deploy on eosbox until verified.
 - Keep the existing `my-srv` 0.9.2 experimental patch dormant; do not
   accidentally deploy it as a substitute for the reviewed RhinePods branch.
+- **Compatibility guard discovered 2026-11-14:** upstream `main` is 44 commits
+  ahead of the deployed 0.9.2 tag, with hundreds of changed files. The first
+  metadata-feature Actions run (`43642240155`) successfully compiled the
+  *newer* web frontend, but that alone does not establish compatibility with
+  the deployed 0.9.2 API. Do **not** substitute that artifact in production.
+- For testing the currently deployed server, `compat/metadata-0.9.2.patch`
+  backports **only the same Media Session feature** to the exact upstream
+  PinePods 0.9.2 tag (`caed39613b6218161c9d11966aa63a1a94f63750`).
+  The backport's patch hunks were matched against the tagged source. The
+  dedicated workflow `.github/workflows/media-session-092.yml` runs that
+  build on GitHub, executes the metadata JS tests, and publishes only a
+  compressed frontend artifact. This is not an official release, not a Docker
+  image, and not deployed. The first workflow run is `43643575697`.
+- Before any live deployment, inspect the compatibility build's results,
+  package a local *web-only* overlay on the existing 0.9.2 image, verify
+  current mounts and health, and request explicit approval for an app-only
+  cutover. The original Compose configuration/image remain the rollback.
+
 
 ## Safety, review and scope
 
