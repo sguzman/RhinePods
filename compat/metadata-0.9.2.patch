@@ -1,0 +1,82 @@
+--- a/web/src/components/audio.rs
++++ b/web/src/components/audio.rs
+@@ -38,6 +38,42 @@
+ use yew::{function_component, html, Callback, Html};
+ use yew_router::history::{BrowserHistory, History};
+ use yewdux::prelude::*;
++use wasm_bindgen::prelude::wasm_bindgen;
++
++// Publish episode-specific metadata to the browser, which can forward it to
++// the OS media controls (e.g., Firefox MPRIS on Linux). Do not override browser
++// media-key handling or the native HTML audio/video element.
++#[wasm_bindgen(inline_js = r#"
++export function rhinepodsSetMediaMetadata(title, artist, album, artworkUrl) {
++    if (typeof navigator === "undefined" || !("mediaSession" in navigator) ||
++        typeof window === "undefined" || typeof window.MediaMetadata !== "function") return;
++    const artwork = [];
++    if (artworkUrl) {
++        try {
++            const image = new URL(artworkUrl, document.baseURI);
++            if (["https:", "http:", "blob:"].includes(image.protocol)) {
++                artwork.push({src: image.href});
++            }
++        } catch (_) { /* Keep the text metadata even if artwork is invalid. */ }
++    }
++    try {
++        navigator.mediaSession.metadata = new window.MediaMetadata({
++            title, artist, album, artwork
++        });
++    } catch (_) { /* The browser may not implement MediaMetadata. */ }
++}
++export function rhinepodsClearMediaMetadata() {
++    if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
++        try { navigator.mediaSession.metadata = null; } catch (_) {}
++    }
++}
++"#)]
++extern "C" {
++    #[wasm_bindgen(js_name = rhinepodsSetMediaMetadata)]
++    fn rhinepods_set_media_metadata(title: &str, artist: &str, album: &str, artwork_url: &str);
++    #[wasm_bindgen(js_name = rhinepodsClearMediaMetadata)]
++    fn rhinepods_clear_media_metadata();
++}
+ 
+ #[derive(Properties, PartialEq, Debug, Clone)]
+ pub struct AudioPlayerProps {
+@@ -552,6 +588,36 @@
+         );
+     }
+ 
++    // Episode details already exist in the Yew player state. Expose them to
++    // Firefox/MPRIS instead of letting Firefox fall back to the page title.
++    // The chapter artwork follows the same image shown by the full player.
++    {
++        let title = if props.title.trim().is_empty() {
++            props.episode.episodetitle.clone()
++        } else {
++            props.title.clone()
++        };
++        let artwork_url = if current_chapter_image.is_empty() {
++            props.artwork_url.clone()
++        } else {
++            (*current_chapter_image).clone()
++        };
++        use_effect_with(
++            (
++                title,
++                props.episode.author.clone(),
++                props.episode.podcastname.clone(),
++                artwork_url,
++            ),
++            |(title, artist, album, artwork_url)| {
++                rhinepods_set_media_metadata(title, artist, album, artwork_url);
++                || ()
++            },
++        );
++        // Clear only on unmount, not on an episode/chapter metadata update.
++        use_effect_with((), |_| || rhinepods_clear_media_metadata());
++    }
++
+     // Get episode chapters if available
+     use_effect_with(
+         (
