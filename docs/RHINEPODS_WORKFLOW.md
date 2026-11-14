@@ -117,8 +117,26 @@ Local Docker image builds need **no Docker Hub login**.
   knows the current episode title/artwork while `Episode` has podcast
   name/creator. The browser currently exposes only `Pinepods` via MPRIS
   rather than the actual episode title.
-- Do not claim a successful Rust build or real Firefox/MPRIS integration
-  until those checks actually run.
+- Feature branch `feature/media-session-metadata` now contains the
+  browser Media Session fix in `web/src/components/audio.rs` and its
+  regression test in `web/tests/media_session_metadata.mjs`
+  (commit `dafb52b15c0f945d80fb07a0581ee8d64a5ea025`).
+- The inline JavaScript from the committed source passed local isolated
+  Node.js checks (including an exact-code fingerprint comparison): episode
+  title, podcast, creator, cover art, episode switching, unsafe image URL,
+  teardown and unsupported browser. The checked-in regression test uses
+  only Node.js built-ins; no npm installation is needed.
+- Build-only check once a local clone exists:
+  `node web/tests/media_session_metadata.mjs`
+  followed by `docker build --target builder -f dockerfile -t local/rhinepods-web-metadata:check .`
+  in the RhinePods repository root. The second command compiles the frontend
+  into a **builder-only Docker image**; it does not start or replace a
+  container and does not modify the server.
+- **Still pending:** full Rust/Trunk compilation and real
+  Firefox/MPRIS `playerctl metadata` verification on eosbox.
+  Do not merge to RhinePods `main` or deploy on eosbox until verified.
+- Keep the existing `my-srv` 0.9.2 experimental patch dormant; do not
+  accidentally deploy it as a substitute for the reviewed RhinePods branch.
 
 ## Safety, review and scope
 
