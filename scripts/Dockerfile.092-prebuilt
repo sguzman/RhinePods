@@ -3,7 +3,12 @@
 # startup scripts, PostgreSQL configuration and nginx configuration unchanged.
 FROM madeofpendletonwool/pinepods:0.9.2
 LABEL org.opencontainers.image.description="RhinePods Media Session test: PinePods 0.9.2 web assets only"
-LABEL org.opencontainers.image.revision="pinepods-0.9.2+rhinepods-media-session-43643575697"
+LABEL org.opencontainers.image.revision="pinepods-0.9.2+rhinepods-media-session-artwork-r4"
+# The official image has Trunk-generated JS/WASM filenames from an older
+# build. Delete ONLY the baked frontend tree in this new image layer before
+# adding a complete, matched dist/ tree. This never touches a running container,
+# user downloads or any database/volume.
+RUN rm -rf /var/www/html && mkdir -p /var/www/html
 COPY dist/ /var/www/html/
 
 # GitHub's build artifact gives index.html mode 0600. Without this Nginx
