@@ -328,6 +328,66 @@ async fn a_server_list_with_businessweek_115_is_rendered_and_searchable() {
     sign_out();
 }
 
+#[wasm_bindgen_test]
+async fn a_successful_custom_subscription_survives_returning_to_the_library() {
+    // The first page view caches the old list. Once the custom feed succeeds,
+    // the server has the new show but the client-side list cache must NOT be
+    // allowed to overwrite the newly added podcast on next navigation.
+    let added = podcast_fixture(115, "Bloomberg Businessweek");
+    answer_api_with(json!({
+        "/api/data/return_pods/2": {"pods": [podcast_fixture(116, "Bloomberg Businessweek Daily")]},
+        "/api/data/add_custom_podcast": {"data": added}
+    }));
+    sign_in();
+    let (root, app) = render(Page::Podcasts).await;
+    assert!(!podcast_grid_titles(&root).iter().any(|t| t == "Bloomberg Businessweek"));
+
+    // Emulate the server adding the show; the in-memory *client* cache is old.
+    js_sys::eval(
+        r#"window.__api['/api/data/return_pods/2'].pods.push(
+             window.__api['/api/data/add_custom_podcast'].data);"#,
+    ).unwrap();
+
+    let buttons = root.query_selector_all("button").unwrap();
+    let custom_button = (0..buttons.length())
+        .filter_map(|i| buttons.item(i))
+        .filter_map(|b| b.dyn_into::<web_sys::HtmlElement>().ok())
+        .find(|b| b.inner_text().trim() == "Custom Feed")
+        .expect("open custom feed modal");
+    custom_button.click();
+    TimeoutFuture::new(40).await;
+    let input: web_sys::HtmlInputElement =
+        root.query_selector("#feed_url").unwrap().expect("custom feed URL input")
+            .dyn_into().unwrap();
+    set_input(&input, "https://example.test/115.rss").await;
+    let buttons = root.query_selector_all("#custom_pod_model button").unwrap();
+    let add_button = (0..buttons.length())
+        .filter_map(|i| buttons.item(i))
+        .filter_map(|b| b.dyn_into::<web_sys::HtmlElement>().ok())
+        .find(|b| b.inner_text().trim() == "Add Feed")
+        .expect("Add Feed submit button");
+    add_button.click();
+    TimeoutFuture::new(150).await;
+    assert!(podcast_grid_titles(&root).iter().any(|t| t == "Bloomberg Businessweek"),
+        "the custom-feed success handler should insert the returned podcast");
+    close(root, app);
+
+    // Simulate routing away then back: do not clear module-local request cache,
+    // matching Yew navigation within the same browser tab.
+    let document = web_sys::window().unwrap().document().unwrap();
+    let next_root = document.create_element("div").unwrap();
+    document.body().append_child(&next_root).unwrap();
+    let next_app = yew::Renderer::<Harness>::with_root_and_props(
+        next_root.clone(), HarnessProps { page: Page::Podcasts }
+    ).render();
+    TimeoutFuture::new(200).await;
+    let titles = podcast_grid_titles(&next_root);
+    assert!(titles.iter().any(|t| t == "Bloomberg Businessweek"),
+        "the stale response cache incorrectly erased podcast 115 after navigation: {titles:?}");
+    close(next_root, next_app);
+    sign_out();
+}
+
 // Signing in.
 
 async fn set_input(input: &web_sys::HtmlInputElement, value: &str) {
