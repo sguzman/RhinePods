@@ -1,5 +1,36 @@
 # RhinePods development, branching and upstream workflow
 
+## Follow-up: artist and cover completeness (work in progress)
+
+- The 2026-11-14 live test proved title/album/Waybar, but also showed
+  `xesam:artist` empty and Firefox's `mpris:artUrl` intermittently absent.
+- Source inspection of `Episode` and the global `MediaSessionBridge`
+  confirmed that the bridge used `episode.author` without a fallback and
+  passed only `AudioPlayerProps.artwork_url`, which is normally copied from
+  `episode.episodeartwork`. The separate `episode.artworkurl` podcast
+  cover field was ignored, even when available.
+- Branch `fix/media-artwork-artist` now falls back to the nonempty podcast
+  name if the RSS author field is empty; it prefers a chapter image, episode
+  artwork, and finally podcast-feed cover. No individual creator is invented.
+- Playback pause/resume no longer republishes identical MediaMetadata; only
+  episode/author/album/artwork changes trigger an update. This avoids an
+  unnecessary source of Firefox MPRIS artwork churn.
+- For the actual **image in Waybar**, a complementary, separate branch
+  `sguzman/config-store@feature/waybar-media-art` adds Waybar's native
+  `image#media-cover` module and a small local-per-episode cache. That
+  safely retains artwork if Firefox temporarily clears `mpris:artUrl`,
+  while preventing the previous episode's cover being shown for a new track.
+  The cache uses Firefox's local image URL rather than redownloading it.
+- These are **source and CI changes only** until a new pinned 0.9.2 frontend
+  is built, the opt-in Waybar config is tested, and the user verifies the
+  actual live display. The last accepted deployed image remains r3.
+- Upstream Firefox has separately tracked intermittent Linux MPRIS image
+  reporting (Mozilla Bugzilla 2027725; see also 2027522, fixed in 154).
+  Correct app metadata alone may not guarantee `mpris:artUrl` is always
+  present. The Waybar cache is intentional resilience against that behavior.
+
+---
+
 ## Final Firefox/MPRIS acceptance — 2026-11-14
 
 - The metadata feature **works live** with the 0.9.2-compatible r3 image.
