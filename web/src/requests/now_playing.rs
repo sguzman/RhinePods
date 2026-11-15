@@ -38,6 +38,10 @@ pub struct NowPlayingDevice {
     #[serde(default)]
     pub title: String,
     #[serde(default)]
+    pub artist: String,
+    #[serde(default)]
+    pub podcast_name: String,
+    #[serde(default)]
     pub artwork_url: String,
     #[serde(default)]
     pub position_sec: f64,
@@ -328,6 +332,8 @@ pub fn send_report(
     episode_id: i32,
     is_youtube: bool,
     title: &str,
+    artist: &str,
+    podcast_name: &str,
     artwork_url: &str,
     position_sec: f64,
     duration_sec: f64,
@@ -340,6 +346,8 @@ pub fn send_report(
             "episode_id": episode_id,
             "is_youtube": is_youtube,
             "title": title,
+            "artist": artist,
+            "podcast_name": podcast_name,
             "artwork_url": artwork_url,
             "position_sec": position_sec,
             "duration_sec": duration_sec,
