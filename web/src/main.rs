@@ -2,6 +2,7 @@ mod components;
 mod pages;
 mod requests;
 
+use crate::components::audio::MediaSessionBridge;
 use crate::components::navigation::NavigationHandler;
 use crate::components::oauth_callback::OAuthCallback;
 use crate::components::restore_overlay::RestoreOverlay;
@@ -248,6 +249,7 @@ fn language_manager() -> Html {
 
     html! {
         <BrowserRouter>
+            <MediaSessionBridge />
             <NavigationHandler>
                 <Switch<Route> render={switch} />
             </NavigationHandler>
