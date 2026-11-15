@@ -9,6 +9,7 @@ on:
       - fix/media-artwork-artist
     paths:
       - "compat/**"
+      - "web/tests/media_session_metadata.mjs"
       - ".github/workflows/media-session-092.yml"
   workflow_dispatch:
 
