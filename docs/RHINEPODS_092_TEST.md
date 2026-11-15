@@ -1,5 +1,74 @@
 # RhinePods metadata — prebuilt PinePods 0.9.2 frontend (opt-in)
 
+## Current metadata bridge fix — new r3 build (2026-11-14)
+
+**Firefox/Web Console diagnosis:** While a real episode was playing,
+`navigator.mediaSession.metadata` was `null` even though the upgraded
+frontend served HTTP 200. Directly assigning
+`new MediaMetadata({title: "RHINEPODS DIRECT TEST", ...})` in Firefox worked:
+`playerctl` and Waybar both immediately displayed the test title. Therefore
+Firefox → MPRIS → Waybar works, and the bug is inside the frontend.
+
+**Source-cause hypothesis:** The first patch put metadata setting and cleanup
+inside the page-specific `AudioPlayer`, which PinePods unmounts on route
+changes even if playback continues. Its unmount cleanup could clear the
+metadata. To avoid that fragile lifecycle entirely, we introduced **one
+app-wide `MediaSessionBridge`** at the `LanguageManager`/router level. It
+subscribes to `UIState` and updates title, creator, podcast, artwork when
+those values or the playback state change; it only clears metadata when
+there is no current episode. It also picks chapter artwork from playback
+position without rerendering for every elapsed second.
+
+**Verified:** Both the current Rhino/RhinePods frontend and a distinct build
+against upstream PinePods **0.9.2** compiled successfully in GitHub Actions.
+Compatibility run: https://github.com/sguzman/RhinePods/actions/runs/43662901995
+
+- Latest compatible artifact: `rhinepods-web-pinepods-0.9.2-metadata`
+- Compressed frontend tarball size: **5,968,823 bytes** (~5.69 MiB)
+- SHA-256: `39d86bc9c529ae662367b66529c15c1c91a7e72e44ff93c569002720b430b0b3`
+- Artifact expires approximately **November 21, 2026, 19:27 Mexico City time**.
+- The build helper has been updated to use this new run, normalize web file
+  permissions with `chmod -R a+rX /var/www/html`, and smoke-test *real Nginx
+  HTTP HTML + CSS* in isolation before allowing deployment.
+- New local image tag: `local/rhinepods:pinepods-0.9.2-metadata-43662901995-r3`.
+- Opt-in Compose overlay `scripts/overlay-092-prebuilt.yaml` now selects r3.
+
+Run separately from the actual existing local clone (check `git status --short`
+if there are uncommitted edits):
+
+```fish
+cd ~/Code/Apps/RhinePods
+```
+
+```fish
+git pull --ff-only origin feature/media-session-metadata
+```
+
+```fish
+fish scripts/build-092-prebuilt.fish
+```
+
+The builder permits either the official 0.9.2 image or the previous tested
+r2 image to be running. It only downloads the **small** frontend ZIP; it
+uses the original already-cached image as a local build base. **No service
+replacement happens during image building.** The safe-test output must
+include `PASS: Nginx serves RhinePods HTML and CSS over HTTP` before cutover.
+
+After that, with explicit user permission, the targeted switch remains:
+
+```fish
+docker-compose --env-file /services/pinepods/pinepods.env -f ~/Projects/my-srv/services/pinepods/docker-compose.yaml -f ~/Code/Apps/RhinePods/scripts/overlay-092-prebuilt.yaml up -d --no-deps pinepods
+```
+
+Then actually verify `curl -fsS -o /dev/null -w 'HTTP %{http_code}\\n' http://127.0.0.1:8040/`, load the frontend in Firefox (hard reload
+with Ctrl+Shift+R), start an episode, verify
+`navigator.mediaSession.metadata` and `playerctl --player=firefox metadata`.
+**Compilation success alone does not prove the live metadata fix.** If
+necessary, use the **original Compose file alone** to revert only PinePods.
+
+---
+
+
 ## Critical update — 403 root cause confirmed (2026-11-14)
 
 The first r1 test image started and reported API health, **but Nginx returned 403**.
