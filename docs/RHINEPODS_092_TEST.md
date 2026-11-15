@@ -1,5 +1,64 @@
 # RhinePods metadata — prebuilt PinePods 0.9.2 frontend (opt-in)
 
+## r4 metadata completeness + Waybar artwork (candidate, not deployed)
+
+The already accepted r3 frontend resolves generic episode titles, but the
+Bloomberg episode had an empty MPRIS artist and intermittent `mpris:artUrl`.
+
+The r4 source fix is isolated on `fix/media-artwork-artist`:
+- Artist = RSS author when present; otherwise the known podcast name.
+- Artwork = current chapter image, episode art, then feed cover URL.
+- No duplicate MediaSession metadata publication just because playback
+  paused/resumed, reducing unnecessary Firefox image churn.
+- The baked previous frontend JS/WASM assets are **removed within the new
+  image layer** before copying the complete r4 assets, preventing mixing
+  old and new filenames. No running files or Docker volumes are deleted.
+
+GitHub Actions results:
+- Current RhinePods frontend: successful compile
+  <https://github.com/sguzman/RhinePods/actions/runs/43669310907>
+- **Exact PinePods 0.9.2** frontend: successful compile
+  <https://github.com/sguzman/RhinePods/actions/runs/43669406045>
+- New compressed tarball: **5,968,686 bytes**
+- Exact tarball SHA-256:
+  `1d0031d6769c2f0bc5763871b9243d8b6c9bdcae6c6435d6887fc206b0698c82`
+- New local image tag:
+  `local/rhinepods:pinepods-0.9.2-metadata-43669406045-r4`
+
+Builder now accepts the currently deployed r3 image as its starting
+service state, but still builds **only** from the locally cached official
+0.9.2 image. It does not pull Docker layers or recompile Rust, and it
+uses an isolated Nginx smoke test before any optional Compose cutover.
+
+After reviewing local work, the user may opt into a test from
+`~/Code/Apps/RhinePods`:
+
+```fish
+git status --short
+git fetch origin fix/media-artwork-artist
+git switch --track -c fix/media-artwork-artist origin/fix/media-artwork-artist
+fish scripts/build-092-prebuilt.fish
+```
+
+Check for `PASS: Nginx serves RhinePods HTML and CSS over HTTP`. Only
+then use the existing one-service Compose overlay to switch PinePods.
+Hard reload Firefox once after deployment, then check browser
+`navigator.mediaSession.metadata` and
+`playerctl --player=firefox metadata` for artist/artUrl.
+
+Separately, `sguzman/config-store` branch `feature/waybar-media-art`
+contains the native Waybar 26px cover image module and a track-specific
+cache. It has its own passing no-network GitHub Actions shell tests, but
+is **not deployed to eosbox**. That UI must be installed and visually
+verified before either feature branch is merged.
+
+See the previously documented r3 rollback procedure below if needed.
+The backend, podcasts, database, volumes and media playback APIs are
+unchanged.
+
+---
+
+
 ## Live verification: r3 acceptance (2026-11-14)
 
 The r3 overlay was deployed to eosbox and the PinePods web UI served HTTP 200.
