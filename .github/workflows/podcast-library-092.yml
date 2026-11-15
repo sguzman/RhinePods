@@ -1,0 +1,73 @@
+name: RhinePods — PinePods 0.9.2 podcast library compatibility
+
+# Build-only, no deployment or Docker push; this tests the deployed upstream tag.
+on:
+  push:
+    branches:
+      - investigate/podcast-library-115
+    paths:
+      - "compat/podcast-library-0.9.2.patch"
+      - ".github/workflows/podcast-library-092.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pinepods-092-web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - name: Check out RhinePods tests and patches
+        uses: actions/checkout@v4
+      - name: Check out exact upstream PinePods 0.9.2
+        uses: actions/checkout@v4
+        with:
+          repository: madeofpendletonwool/PinePods
+          ref: 0.9.2
+          path: pinepods-092
+          persist-credentials: false
+      - name: Verify immutable upstream tag and apply both independent patches
+        run: |
+          set -euo pipefail
+          expected=caed39613b6218161c9d11966aa63a1a94f63750
+          actual="$(git -C pinepods-092 rev-parse HEAD)"
+          test "$actual" = "$expected" || { echo "Unexpected upstream commit $actual"; exit 1; }
+          git -C pinepods-092 apply --check "$GITHUB_WORKSPACE/compat/metadata-0.9.2.patch"
+          git -C pinepods-092 apply "$GITHUB_WORKSPACE/compat/metadata-0.9.2.patch"
+          git -C pinepods-092 apply --check "$GITHUB_WORKSPACE/compat/podcast-library-0.9.2.patch"
+          git -C pinepods-092 apply "$GITHUB_WORKSPACE/compat/podcast-library-0.9.2.patch"
+          git -C pinepods-092 diff --check
+          mkdir -p pinepods-092/web/tests
+          cp web/tests/media_session_metadata.mjs pinepods-092/web/tests/media_session_metadata.mjs
+      - name: Test the existing media metadata patch
+        run: node pinepods-092/web/tests/media_session_metadata.mjs
+      - name: Install Rust and WASM target
+        run: |
+          rustup toolchain install 1.99.0 --profile minimal --target wasm32-unknown-unknown
+          rustup default 1.99.0
+      - name: Install upstream-compatible Trunk
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.local/bin"
+          url="https://github.com/trunk-rs/trunk/releases/download/v0.21.14/trunk-x86_64-unknown-linux-musl.tar.gz"
+          curl --fail --location --silent --show-error "$url" --output /tmp/trunk.tar.gz
+          curl --fail --location --silent --show-error "$url.sha256" --output /tmp/trunk.tar.gz.sha256
+          printf '%s  %s\n' "$(cat /tmp/trunk.tar.gz.sha256)" "/tmp/trunk.tar.gz" | sha256sum --check -
+          tar -xzf /tmp/trunk.tar.gz -C "$HOME/.local/bin" trunk
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: Compile exact patched 0.9.2 frontend
+        working-directory: pinepods-092/web
+        env:
+          RUSTFLAGS: '--cfg=web_sys_unstable_apis --cfg getrandom_backend="wasm_js"'
+        run: trunk build --features server_build --release
+      - name: Package optional frontend artifact (never deployed)
+        run: |
+          tar -czf rhinepods-web-pinepods-0.9.2-library.tar.gz -C pinepods-092/web/dist .
+          sha256sum rhinepods-web-pinepods-0.9.2-library.tar.gz
+          stat -c 'Compressed frontend: %s bytes' rhinepods-web-pinepods-0.9.2-library.tar.gz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rhinepods-web-pinepods-092-library-test
+          path: rhinepods-web-pinepods-0.9.2-library.tar.gz
+          retention-days: 7
