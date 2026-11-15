@@ -5,11 +5,11 @@
 # With an argument, accepts the manually downloaded artifact ZIP or tar.gz.
 
 set -l expected_base "madeofpendletonwool/pinepods:0.9.2"
-set -l image_tag "local/rhinepods:pinepods-0.9.2-metadata-43662901995-r3"
-set -l run_id "43662901995"
+set -l image_tag "local/rhinepods:pinepods-0.9.2-metadata-43669406045-r4"
+set -l run_id "43669406045"
 set -l artifact_name "rhinepods-web-pinepods-0.9.2-metadata"
 set -l archive_name "rhinepods-web-pinepods-0.9.2.tar.gz"
-set -l archive_sha256 "39d86bc9c529ae662367b66529c15c1c91a7e72e44ff93c569002720b430b0b3"
+set -l archive_sha256 "1d0031d6769c2f0bc5763871b9243d8b6c9bdcae6c6435d6887fc206b0698c82"
 set -l here (realpath (dirname (status filename)))
 
 function fail -a message
@@ -31,9 +31,9 @@ docker image inspect "$expected_base" >/dev/null 2>/dev/null
 or fail "Official 0.9.2 base image is not cached. No Docker pull will be attempted."
 
 set -l running_image (docker inspect --format '{{.Config.Image}}' pinepods 2>/dev/null)
-# Allow either the original 0.9.2 image or our previous tested r2 overlay.
+# Allow the original 0.9.2 image or earlier tested r2/r3 overlays.
 # Rebuild from the cached official image regardless of which one is live.
-if not contains -- "$running_image" "$expected_base" "local/rhinepods:pinepods-0.9.2-metadata-43643575697-perms-r2"
+if not contains -- "$running_image" "$expected_base" "local/rhinepods:pinepods-0.9.2-metadata-43643575697-perms-r2" "local/rhinepods:pinepods-0.9.2-metadata-43662901995-r3"
     fail "Unexpected running PinePods image '$running_image'; refusing to proceed."
 end
 
