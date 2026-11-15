@@ -1,5 +1,45 @@
 # RhinePods metadata — prebuilt PinePods 0.9.2 frontend (opt-in)
 
+## Critical update — 403 root cause confirmed (2026-11-14)
+
+The first r1 test image started and reported API health, **but Nginx returned 403**.
+An actual image inspection proved that `/var/www/html/index.html` was
+`-rw------- root:root` (0600) and that `nginx:nginx` **could not read it**.
+The user restored the original official 0.9.2 container and confirmed the UI
+works again. This is a packaging/permissions failure, not a Rust compile error.
+
+**Do NOT deploy the old r1 image again.** Do not rebuild Rust or redownload the
+frontend. The new `scripts/Dockerfile.092-permissions` uses the **existing r1
+image as its base** and fixes web access with `chmod -R a+rX /var/www/html`.
+`scripts/repair-092-permissions.fish` creates
+`local/rhinepods:pinepods-0.9.2-metadata-43643575697-perms-r2` entirely
+offline, then tests *Nginx serving HTML and CSS via HTTP in a disposable
+container*, not just the API health endpoint. If that test fails, **do not
+switch** the real server. The Compose image-only overlay now points at r2.
+
+On eosbox in fish, separately:
+
+```fish
+cd ~/Code/Apps/RhinePods
+```
+
+```fish
+git pull --ff-only origin feature/media-session-metadata
+```
+
+```fish
+fish scripts/repair-092-permissions.fish
+```
+
+After it prints `PASS: Nginx serves the real RhinePods HTML and CSS over HTTP`
+and the new r2 tag, review Docker/Compose and explicitly approved cutover.
+The isolated test requires no credentials, exposes no host ports and starts
+neither the PostgreSQL nor PinePods backend. No host reboot or other services
+need changing. Rollback is the original Compose file without the overlay.
+
+---
+
+
 **Current state:** metadata tests and Rust/Yew release build succeeded on GitHub Actions.
 **Still untested:** browser/runtime MPRIS integration and deploying on eosbox.
 **Do not deploy without explicit approval.** This is *not* a full RhinePods
