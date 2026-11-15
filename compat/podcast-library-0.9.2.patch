@@ -41,3 +41,16 @@
                          match pod_req::call_get_podcasts_extra(&server_name, &api_key, &user_id)
                              .await
                          {
+
+--- a/web/static/styles.css
++++ b/web/static/styles.css
+@@ -2552,7 +2552,8 @@
+     padding: 0.5rem;
+     background-color: rgba(0, 0, 0, 0.7);
+     color: white;
+-    opacity: 0;
++    /* Show the canonical API title even when cover-art branding differs. */
++    opacity: 1;
+     transition: opacity 0.3s ease;
+ }
+ 

@@ -25,6 +25,8 @@ jobs:
         run: |
           rustup toolchain install 1.99.0 --profile minimal --target wasm32-unknown-unknown
           rustup default 1.99.0
+      - name: Check persistent podcast grid labels
+        run: node web/tests/podcast_grid_labels.mjs
       - name: wasm-pack
         run: cargo install --locked wasm-pack --version 0.14.0
       - name: Execute real Yew browser tests (no production service)

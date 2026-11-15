@@ -123,3 +123,12 @@ single cause. No live deployment has been performed.
 - The original r5 invalidation runs only after a successful **in-tab custom-feed POST**; a subscription added by another device, server sync, or another route can still be missed for the request cache's 120-second TTL.
 - The new browser regression mounts the real Podcasts page with an old list, simulates an out-of-tab server-side subscription, and remounts without clearing the request cache. The library page now explicitly invalidates its own cached subscriptions GET before loading so the fresh server list can reach the UI. The exact 0.9.2 compatibility patch includes the same isolated change.
 - This is a **candidate additional safeguard, not proof of the user's live UI root cause**. GitHub Actions and real QA must pass before any image changes. The deployed r5 remains untouched by repository commits.
+
+### Distinguishing subscription title from publisher artwork
+
+A follow-up screenshot with `business` entered in **Podcasts** shows four cards with episode counts **1085, 104, 826 and 5587**, matching the four records from the read-only API. The **5587** entry matches podcast **115**, whose API title is `Bloomberg Businessweek`. Its image itself says `Bloomberg Businessweek Daily`; those words are printed on the cover artwork and are *not* evidence of a second subscription. This corrects the earlier diagnosis that the Daily card was necessarily a separate show.
+
+Source inspection confirms `web/src/pages/podcasts.rs` renders the true `podcast.podcastname` into `.podcast-title-grid`, but `web/static/styles.css` hides its `.podcast-info` container with `opacity: 0` unless the card is hovered. Therefore, the UI can falsely look like the actual subscribed title is absent. This is a distinct display/usability issue, not database loss.
+
+New candidate CSS change: keep `.podcast-info` visible by default, so the API name appears consistently with the artwork. Keep the rightmost 5,587-episode entry and its data unchanged. This requires a new frontend artifact and separately authorized deployment; running r5 is untouched. Until then, **hover the card** or switch to **List** to see the canonical name. No further resubscription or mutation is justified.
+
