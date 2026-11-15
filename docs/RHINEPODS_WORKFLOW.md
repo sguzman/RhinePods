@@ -1,5 +1,36 @@
 # RhinePods development, branching and upstream workflow
 
+## Final Firefox/MPRIS acceptance — 2026-11-14
+
+- The metadata feature **works live** with the 0.9.2-compatible r3 image.
+  After Firefox fetched a consistent set of JS/WASM files, `playerctl`
+  reported `xesam:title = Marvell to Acquire Lumentum in Historic $115 Billion Tech Deal`
+  and `xesam:album = Bloomberg Intelligence`. The custom Waybar widget
+  displayed the actual episode title.
+- Firefox initially displayed a `Subresource Integrity` mismatch and
+  `inline0.js` missing export `rhinepodsSetMediaMetadata`, indicating
+  inconsistent/cached web assets. Disabling the network cache and hard
+  refreshing resolved the failures. A subsequent normal-cache check still
+  showed the correct episode title and podcast name, without manual metadata
+  injection.
+- Directly setting `navigator.mediaSession.metadata` in Firefox was an
+  earlier diagnostic: that separate test also reached MPRIS and Waybar.
+  The acceptance above is **automatic from the deployed RhinePods frontend**.
+- `xesam:artist` was empty for the tested Bloomberg episode; may reflect
+  missing author data. `mpris:artUrl` appeared in one verified read and
+  was absent in a later read. Neither should be described as consistently
+  proven. These are follow-up quality checks, **not blockers** for the original
+  title/podcast metadata objective.
+- App-side metadata now lives in a persistent `MediaSessionBridge` rather
+  than a page-specific player's lifecycle. The exact 0.9.2 compatibility
+  backport, GitHub Actions tests, offline overlay packaging and known-good
+  rollback procedure are preserved in this feature's commits.
+- **Accepted for merge to RhinePods `main`** at the user's request.
+  Repository changes do not automatically redeploy eosbox; its custom
+  container is managed separately through the existing Compose overlay.
+
+---
+
 ## Current MPRIS browser diagnosis and r3 fix (2026-11-14)
 
 - Original 0.9.2-compatible r1 image: 403 due to root-owned index.html mode
@@ -28,9 +59,7 @@
   with readable Nginx frontend assets, and tests actual HTTP serving in an
   isolated container without touching the running service. The Compose overlay
   now targets r3. See `docs/RHINEPODS_092_TEST.md` for exact steps and rollback.
-- **Still unverified:** Firefox receiving auto-published metadata from the
-  new app-wide component after r3 deployment. Do not merge to `main` or
-  declare feature complete until live Firefox/Waybar behavior is confirmed.
+- **Verified:** Automatic episode title and podcast album appeared in Firefox/MPRIS and Waybar on the deployed r3 image after resolving stale cached JavaScript. Author/artwork completeness remains to check separately.
 
 ---
 
