@@ -664,11 +664,28 @@ pub fn audio_player(props: &AudioPlayerProps) -> Html {
                         .as_ref()
                         .map(|m| m.current_time())
                         .unwrap_or(state.current_time_seconds);
+                    // Match the media-session identity but publish through
+                    // the existing generic now-playing service, too.
+                    let podcast = cp.episode.podcastname.trim();
+                    let author = cp.episode.author.trim();
+                    let artist = if author.is_empty() { podcast } else { author };
+                    let title = if cp.title.trim().is_empty() {
+                        cp.episode.episodetitle.as_str()
+                    } else {
+                        cp.title.as_str()
+                    };
+                    let artwork = [
+                        cp.artwork_url.as_str(),
+                        cp.episode.episodeartwork.as_str(),
+                        cp.episode.artworkurl.as_str(),
+                    ].into_iter().find(|url| !url.trim().is_empty()).unwrap_or_default();
                     crate::requests::now_playing::send_report(
                         cp.episode_id,
                         cp.is_youtube,
-                        &cp.title,
-                        &cp.artwork_url,
+                        title,
+                        artist,
+                        podcast,
+                        artwork,
                         position,
                         cp.duration_sec,
                         state.audio_playing.unwrap_or(false),
