@@ -5,11 +5,11 @@
 # With an argument, accepts the manually downloaded artifact ZIP or tar.gz.
 
 set -l expected_base "madeofpendletonwool/pinepods:0.9.2"
-set -l image_tag "local/rhinepods:pinepods-0.9.2-metadata-43669406045-r4"
-set -l run_id "43669406045"
-set -l artifact_name "rhinepods-web-pinepods-0.9.2-metadata"
-set -l archive_name "rhinepods-web-pinepods-0.9.2.tar.gz"
-set -l archive_sha256 "1d0031d6769c2f0bc5763871b9243d8b6c9bdcae6c6435d6887fc206b0698c82"
+set -l image_tag "local/rhinepods:pinepods-0.9.2-library-43730927772-r5"
+set -l run_id "43730927772"
+set -l artifact_name "rhinepods-web-pinepods-092-library-test"
+set -l archive_name "rhinepods-web-pinepods-0.9.2-library.tar.gz"
+set -l archive_sha256 "21ad07ddb954af1501bff58b9acc4bb484294831510ad4091726703a65395346"
 set -l here (realpath (dirname (status filename)))
 
 function fail -a message
@@ -31,9 +31,9 @@ docker image inspect "$expected_base" >/dev/null 2>/dev/null
 or fail "Official 0.9.2 base image is not cached. No Docker pull will be attempted."
 
 set -l running_image (docker inspect --format '{{.Config.Image}}' pinepods 2>/dev/null)
-# Allow the original 0.9.2 image or earlier tested r2/r3 overlays.
+# Allow the original 0.9.2 image or previously built r2/r3/r4 overlays.
 # Rebuild from the cached official image regardless of which one is live.
-if not contains -- "$running_image" "$expected_base" "local/rhinepods:pinepods-0.9.2-metadata-43643575697-perms-r2" "local/rhinepods:pinepods-0.9.2-metadata-43662901995-r3"
+if not contains -- "$running_image" "$expected_base" "local/rhinepods:pinepods-0.9.2-metadata-43643575697-perms-r2" "local/rhinepods:pinepods-0.9.2-metadata-43662901995-r3" "local/rhinepods:pinepods-0.9.2-metadata-43669406045-r4"
     fail "Unexpected running PinePods image '$running_image'; refusing to proceed."
 end
 
@@ -42,7 +42,7 @@ if docker image inspect "$image_tag" >/dev/null 2>/dev/null
     exit 0
 end
 
-set -l workdir (mktemp -d /tmp/rhinepods-092-metadata-XXXXXXXX)
+set -l workdir (mktemp -d /tmp/rhinepods-092-library-XXXXXXXX)
 or fail "could not create temporary workspace"
 set -l archive "$workdir/$archive_name"
 
