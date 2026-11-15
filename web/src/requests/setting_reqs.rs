@@ -1457,6 +1457,13 @@ pub async fn call_add_custom_feed(
 
         let add_custom_podcast_response: AddCustomPodcastResponse =
             serde_json::from_str(&response_text).map_err(Error::msg)?;
+        // The Podcasts, Feed and Queue pages share this cached list. After a
+        // successful custom subscription, a later page visit must not replace
+        // the just-added podcast with the previous 120-second cached response.
+        crate::requests::cache::invalidate_prefix(&format!(
+            "{}/api/data/return_pods",
+            server_name
+        ));
         Ok(add_custom_podcast_response.data)
     } else {
         Err(Error::msg(format!(
