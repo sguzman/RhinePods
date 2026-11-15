@@ -37,7 +37,7 @@ or abort "offline image repair failed"
 echo "Testing Nginx access and HTTP response inside the repaired image..."
 docker run --rm --network none --entrypoint /bin/sh "$fixed" -ec '
     set -eu
-    su-exec nginx:nginx test -r /var/www/html/index.html
+    su-exec nginx:nginx sh -c "test -r /var/www/html/index.html"
     mkdir -p /run/nginx /var/lib/nginx/tmp /var/log/nginx
     chown -R nginx:nginx /run/nginx /var/lib/nginx /var/log/nginx
     nginx -t
