@@ -236,6 +236,10 @@ enum ClientMsg {
         #[serde(default)]
         title: String,
         #[serde(default)]
+        artist: String,
+        #[serde(default)]
+        podcast_name: String,
+        #[serde(default)]
         artwork_url: String,
         #[serde(default)]
         position_sec: f64,
@@ -439,6 +443,8 @@ async fn handle_now_playing_socket(
                             episode_id,
                             is_youtube,
                             title,
+                            artist,
+                            podcast_name,
                             artwork_url,
                             position_sec,
                             duration_sec,
@@ -452,6 +458,8 @@ async fn handle_now_playing_socket(
                                 episode_id,
                                 is_youtube,
                                 title,
+                                artist,
+                                podcast_name,
                                 artwork_url,
                                 position_sec,
                                 duration_sec,
@@ -590,6 +598,8 @@ fn idle_snapshot(
         episode_id: 0,
         is_youtube: false,
         title: String::new(),
+        artist: String::new(),
+        podcast_name: String::new(),
         artwork_url: String::new(),
         position_sec: 0.0,
         duration_sec: 0.0,
