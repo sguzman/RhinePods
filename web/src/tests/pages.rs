@@ -275,6 +275,59 @@ async fn the_stats_page_shows_the_servers_numbers() {
     assert_shows(&shown, "987");
 }
 
+// Real subscription-list regression: the API already contains podcast 115.
+// This tests the ACTUAL Yew Podcasts page and its search handler, not a
+// reimplementation of the predicate. Nothing is posted or changed on a server.
+fn podcast_fixture(id: i32, name: &str) -> Value {
+    json!({
+        "podcastid": id, "podcastname": name,
+        "artworkurl": "https://example.test/cover.png",
+        "description": "", "episodecount": 30,
+        "websiteurl": "https://example.test", "feedurl": format!("https://example.test/{id}.rss"),
+        "author": "Publisher", "categories": {}, "explicit": false,
+        "podcastindexid": 0, "is_favorite": false,
+    })
+}
+
+fn podcast_grid_titles(root: &web_sys::Element) -> Vec<String> {
+    let nodes = root.query_selector_all(".podcast-title-grid").expect("podcast titles");
+    (0..nodes.length())
+        .filter_map(|i| nodes.item(i))
+        .filter_map(|node| node.text_content())
+        .map(|text| text.trim().to_string())
+        .collect()
+}
+
+#[wasm_bindgen_test]
+async fn a_server_list_with_businessweek_115_is_rendered_and_searchable() {
+    let mut podcasts = (0..108)
+        .map(|n| podcast_fixture(n + 1, &format!("Other Podcast {n}")))
+        .collect::<Vec<_>>();
+    podcasts.push(podcast_fixture(115, "Bloomberg Businessweek"));
+    podcasts.push(podcast_fixture(116, "Bloomberg Businessweek Daily"));
+    answer_api_with(json!({"/api/data/return_pods/2": {"pods": podcasts}}));
+    sign_in();
+    let (root, app) = render(Page::Podcasts).await;
+
+    let titles = podcast_grid_titles(&root);
+    assert_eq!(titles.len(), 110, "the library should render all 110 returned podcasts");
+    assert!(titles.iter().any(|t| t == "Bloomberg Businessweek"),
+        "server's podcast 115 must be present in DOM: {titles:?}");
+
+    let search: web_sys::HtmlInputElement =
+        root.query_selector("input[placeholder='Search podcasts...']")
+            .unwrap().expect("podcast search input")
+            .dyn_into().unwrap();
+    set_input(&search, "Bloomberg Businessweek").await;
+    let filtered = podcast_grid_titles(&root);
+    assert_eq!(filtered.len(), 2, "both exact show and Daily should match: {filtered:?}");
+    assert!(filtered.iter().any(|t| t == "Bloomberg Businessweek"),
+        "the exact show should not be hidden when the user searches: {filtered:?}");
+
+    close(root, app);
+    sign_out();
+}
+
 // Signing in.
 
 async fn set_input(input: &web_sys::HtmlInputElement, value: &str) {
