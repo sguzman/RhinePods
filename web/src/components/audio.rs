@@ -85,6 +85,53 @@ extern "C" {
     fn rhinepods_clear_media_metadata();
 }
 
+// This observer remains mounted across page routes. PinePods mounts/unmounts
+// AudioPlayer independently in each page, while the media element keeps playing.
+// Keeping metadata there caused the old player's cleanup to erase it on navigation.
+#[function_component(MediaSessionBridge)]
+pub fn media_session_bridge() -> Html {
+    // Select only the meaningful metadata and the play/pause transition.
+    // Time ticks do not rerender the bridge unless chapter artwork changes.
+    let metadata = use_selector(|state: &UIState| {
+        state.currently_playing.as_ref().map(|current| {
+            let title = if current.title.trim().is_empty() {
+                current.episode.episodetitle.clone()
+            } else {
+                current.title.clone()
+            };
+            let artwork = state.episode_chapters.as_ref()
+                .and_then(|chapters| {
+                    chapters.iter().rev()
+                        .find(|chapter| {
+                            chapter.startTime
+                                .is_some_and(|start| start as f64 <= state.current_time_seconds)
+                        })
+                        .and_then(|chapter| chapter.img.clone())
+                })
+                .filter(|url| !url.is_empty())
+                .unwrap_or_else(|| current.artwork_url.clone());
+            (
+                title,
+                current.episode.author.clone(),
+                current.episode.podcastname.clone(),
+                artwork,
+                state.audio_playing.unwrap_or(false),
+            )
+        })
+    });
+
+    use_effect_with(metadata, |metadata| {
+        if let Some((title, artist, album, artwork, _is_playing)) = &**metadata {
+            rhinepods_set_media_metadata(title, artist, album, artwork);
+        } else {
+            // Clear only when there is no current episode, not on route changes.
+            rhinepods_clear_media_metadata();
+        }
+        || ()
+    });
+    html! {}
+}
+
 #[derive(Properties, PartialEq, Debug, Clone)]
 pub struct AudioPlayerProps {
     pub episode: Episode,
@@ -416,37 +463,6 @@ pub fn audio_player(props: &AudioPlayerProps) -> Html {
                 || ()
             },
         );
-    }
-
-    // Keep browser/OS metadata synchronized with the currently displayed
-    // episode and its chapter artwork. The effect runs only when one of these
-    // values changes, not on every second of playback.
-    {
-        let title = if props.title.trim().is_empty() {
-            props.episode.episodetitle.clone()
-        } else {
-            props.title.clone()
-        };
-        let artwork = if current_chapter_image.is_empty() {
-            props.artwork_url.clone()
-        } else {
-            (*current_chapter_image).clone()
-        };
-        use_effect_with(
-            (
-                title,
-                props.episode.author.clone(),
-                props.episode.podcastname.clone(),
-                artwork,
-            ),
-            |(title, artist, album, artwork_url)| {
-                rhinepods_set_media_metadata(title, artist, album, artwork_url);
-                || ()
-            },
-        );
-
-        // Clear on player unmount, not on an episode/chapter transition.
-        use_effect_with((), |_| || rhinepods_clear_media_metadata());
     }
 
     // Get episode chapters if available
