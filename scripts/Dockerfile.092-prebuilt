@@ -3,7 +3,7 @@
 # startup scripts, PostgreSQL configuration and nginx configuration unchanged.
 FROM madeofpendletonwool/pinepods:0.9.2
 LABEL org.opencontainers.image.description="RhinePods Media Session test: PinePods 0.9.2 web assets only"
-LABEL org.opencontainers.image.revision="pinepods-0.9.2+rhinepods-media-session-artwork-r4"
+LABEL org.opencontainers.image.revision="pinepods-0.9.2+rhinepods-media-session-artwork-library-fix-r5"
 # The official image has Trunk-generated JS/WASM filenames from an older
 # build. Delete ONLY the baked frontend tree in this new image layer before
 # adding a complete, matched dist/ tree. This never touches a running container,
