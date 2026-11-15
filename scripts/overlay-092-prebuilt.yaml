@@ -1,6 +1,6 @@
-# OPTIONAL / NOT ACTIVE. Never use until explicit approval for a cutover.
+# OPTIONAL / NOT ACTIVE. Use only after the isolated nginx HTTP check passes.
 # Combine with the existing my-srv PinePods Compose file.
 # This changes only the image field for the pinepods service.
 services:
   pinepods:
-    image: local/rhinepods:pinepods-0.9.2-metadata-43643575697
+    image: local/rhinepods:pinepods-0.9.2-metadata-43643575697-perms-r2
