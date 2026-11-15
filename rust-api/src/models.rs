@@ -286,6 +286,11 @@ pub struct NowPlayingSnapshot {
     pub is_youtube: bool,
     #[serde(default)]
     pub title: String,
+    /// Descriptive now-playing metadata; optional for older clients.
+    #[serde(default)]
+    pub artist: String,
+    #[serde(default)]
+    pub podcast_name: String,
     #[serde(default)]
     pub artwork_url: String,
     #[serde(default)]
