@@ -1,5 +1,23 @@
 # RhinePods metadata — prebuilt PinePods 0.9.2 frontend (opt-in)
 
+## Live verification: r3 acceptance (2026-11-14)
+
+The r3 overlay was deployed to eosbox and the PinePods web UI served HTTP 200.
+Firefox initially showed an integrity mismatch and missing `inline0.js`
+module export because of inconsistent cached JavaScript. With Firefox Network
+cache temporarily disabled and a hard reload, automatic episode metadata
+appeared in **Firefox MPRIS and Waybar**: the full episode title and
+`Bloomberg Intelligence` album name. A later normal-cache check confirmed
+both fields persisted. Artwork appeared once but not in a later reading;
+`xesam:artist` remained empty for this episode. The original generic-title
+problem is **resolved**; these minor fields remain observations to revisit.
+
+No further container changes are necessary for this acceptance. This page
+also preserves the rollback instructions for future experiments.
+
+---
+
+
 ## Current metadata bridge fix — new r3 build (2026-11-14)
 
 **Firefox/Web Console diagnosis:** While a real episode was playing,
