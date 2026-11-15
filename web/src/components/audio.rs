@@ -90,7 +90,7 @@ extern "C" {
 // Keeping metadata there caused the old player's cleanup to erase it on navigation.
 #[function_component(MediaSessionBridge)]
 pub fn media_session_bridge() -> Html {
-    // Select only the meaningful metadata and the play/pause transition.
+    // Select only meaningful metadata; play/pause does not require republishing.
     // Time ticks do not rerender the bridge unless chapter artwork changes.
     let metadata = use_selector(|state: &UIState| {
         state.currently_playing.as_ref().map(|current| {
@@ -99,29 +99,52 @@ pub fn media_session_bridge() -> Html {
             } else {
                 current.title.clone()
             };
-            let artwork = state.episode_chapters.as_ref()
+            // RSS feeds don't always supply an author. Never emit an empty
+            // artist if we already know which podcast produced the episode.
+            // The podcast title is an explicit fallback, not a fabricated person.
+            let album = current.episode.podcastname.trim().to_owned();
+            let artist = match current.episode.author.trim() {
+                "" => album.clone(),
+                author => author.to_owned(),
+            };
+
+            // Episode artwork may be absent even when the feed's podcast cover
+            // is available. Prefer current chapter art, then episode art, then
+            // the feed cover. This mirrors the artwork the user expects to see
+            // in the web player and gives Firefox a URL when one exists.
+            let chapter_artwork = state.episode_chapters.as_ref()
                 .and_then(|chapters| {
                     chapters.iter().rev()
                         .find(|chapter| {
                             chapter.startTime
                                 .is_some_and(|start| start as f64 <= state.current_time_seconds)
                         })
-                        .and_then(|chapter| chapter.img.clone())
+                        .and_then(|chapter| chapter.img.as_deref())
                 })
-                .filter(|url| !url.is_empty())
-                .unwrap_or_else(|| current.artwork_url.clone());
-            (
-                title,
-                current.episode.author.clone(),
-                current.episode.podcastname.clone(),
-                artwork,
-                state.audio_playing.unwrap_or(false),
-            )
+                .filter(|url| !url.trim().is_empty());
+
+            let artwork = chapter_artwork
+                .or_else(|| {
+                    [
+                        current.artwork_url.as_str(),
+                        current.episode.episodeartwork.as_str(),
+                        current.episode.artworkurl.as_str(),
+                    ]
+                    .into_iter()
+                    .find(|url| !url.trim().is_empty())
+                })
+                .unwrap_or_default()
+                .trim()
+                .to_owned();
+            (title, artist, album, artwork)
         })
     });
 
+    // Re-publishing identical metadata on pause/resume can cause MPRIS
+    // artwork churn. Publish only when the episode, author, album or artwork
+    // actually changes; pause/resume doesn't change those fields.
     use_effect_with(metadata, |metadata| {
-        if let Some((title, artist, album, artwork, _is_playing)) = &**metadata {
+        if let Some((title, artist, album, artwork)) = &**metadata {
             rhinepods_set_media_metadata(title, artist, album, artwork);
         } else {
             // Clear only when there is no current episode, not on route changes.
