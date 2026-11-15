@@ -376,7 +376,7 @@ async fn a_successful_custom_subscription_survives_returning_to_the_library() {
     // matching Yew navigation within the same browser tab.
     let document = web_sys::window().unwrap().document().unwrap();
     let next_root = document.create_element("div").unwrap();
-    document.body().append_child(&next_root).unwrap();
+    document.body().unwrap().append_child(&next_root).unwrap();
     let next_app = yew::Renderer::<Harness>::with_root_and_props(
         next_root.clone(), HarnessProps { page: Page::Podcasts }
     ).render();
