@@ -38,6 +38,9 @@ impl Device {
             "episode_id": episode,
             "is_youtube": false,
             "title": format!("Episode {episode}"),
+            "artist": format!("Host {episode}"),
+            "podcast_name": format!("Podcast {episode}"),
+            "artwork_url": format!("https://covers.example.test/{episode}.png"),
             "position_sec": position,
             "duration_sec": 3600,
             "playing": playing,
@@ -134,9 +137,16 @@ async fn what_a_device_plays_reaches_the_others_and_the_http_list() {
     assert_eq!(playing["position_sec"], 812.5, "{playing}");
     assert_eq!(playing["playing"], true, "{playing}");
     assert_eq!(playing["title"], "Episode 42", "{playing}");
+    assert_eq!(playing["artist"], "Host 42", "{playing}");
+    assert_eq!(playing["podcast_name"], "Podcast 42", "{playing}");
+    assert_eq!(playing["artwork_url"], "https://covers.example.test/42.png", "{playing}");
 
     let over_http = listed(&app, &user).await;
-    assert_eq!(find(&over_http, "phone")["episode_id"], 42, "{over_http:?}");
+    let record = find(&over_http, "phone");
+    assert_eq!(record["episode_id"], 42, "{over_http:?}");
+    assert_eq!(record["artist"], "Host 42", "{over_http:?}");
+    assert_eq!(record["podcast_name"], "Podcast 42", "{over_http:?}");
+    assert_eq!(record["artwork_url"], "https://covers.example.test/42.png", "{over_http:?}");
 }
 
 #[tokio::test(flavor = "multi_thread")]
