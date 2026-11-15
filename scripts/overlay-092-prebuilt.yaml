@@ -3,4 +3,4 @@
 # This changes only the image field for the pinepods service.
 services:
   pinepods:
-    image: local/rhinepods:pinepods-0.9.2-metadata-43643575697-perms-r2
+    image: local/rhinepods:pinepods-0.9.2-metadata-43662901995-r3
