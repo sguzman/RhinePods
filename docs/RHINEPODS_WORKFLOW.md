@@ -1,5 +1,29 @@
 # RhinePods development, branching and upstream workflow
 
+## Incident and repair — November 14, 2026
+
+- PinePods 0.9.2 compatible frontend compiled and packaged, but first
+  deployment of `local/rhinepods:pinepods-0.9.2-metadata-43643575697` served
+  **HTTP 403**. Container was running and healthy because the backend-only
+  health check did not detect failure to serve frontend files.
+- User rolled back via **original Compose only** and confirmed original
+  PinePods web UI restored, database/downloads intact.
+- Image diagnostic proved `/var/www/html/index.html` mode **0600**,
+  `root:root`; `nginx:nginx` lacked read permission. This is the confirmed
+  cause of the index page's 403. Earlier build script did not normalize
+  artifact permissions.
+- Current repair: `scripts/Dockerfile.092-permissions` derives **offline**
+  from the cached failed-image tag and runs `chmod -R a+rX /var/www/html`.
+  `scripts/repair-092-permissions.fish` creates a new `-perms-r2` tag and
+  smoke-tests actual Nginx HTTP HTML/CSS serving in an isolated container.
+  `scripts/overlay-092-prebuilt.yaml` now selects the repaired r2 tag.
+- **Do not deploy r1 again.** Wait for successful isolated HTTP test,
+  then the user's explicit approval / supervision for an app-only switch.
+  No further GitHub artifacts, Rust recompilation, database changes or large
+  downloads are required.
+- Specific procedure: `docs/RHINEPODS_092_TEST.md`.
+
+
 This document is shared operating context for the owner and all coding agents.
 **Read `AGENTS.md` and this file at the start of work in this repository.**
 
