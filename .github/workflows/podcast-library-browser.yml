@@ -1,0 +1,48 @@
+name: RhinePods — podcast library browser regression
+
+# Browser regression only. No Docker build/push, backend deployment or data writes.
+on:
+  push:
+    branches:
+      - feature/integrate-podcast-library-fixes
+      - main
+    paths:
+      - "web/src/tests/**"
+      - "web/src/pages/podcasts.rs"
+      - "web/src/requests/**"
+      - "web/static/styles.css"
+      - "web/tests/podcast_grid_labels.mjs"
+      - ".github/workflows/podcast-library-browser.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "web/src/tests/**"
+      - "web/src/pages/podcasts.rs"
+      - "web/src/requests/**"
+      - "web/static/styles.css"
+      - "web/tests/podcast_grid_labels.mjs"
+      - ".github/workflows/podcast-library-browser.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rust 1.99 WASM toolchain
+        run: |
+          rustup toolchain install 1.99.0 --profile minimal --target wasm32-unknown-unknown
+          rustup default 1.99.0
+      - name: Check persistent podcast grid labels
+        run: node web/tests/podcast_grid_labels.mjs
+      - name: wasm-pack
+        run: cargo install --locked wasm-pack --version 0.14.0
+      - name: Execute real Yew browser tests (no production service)
+        working-directory: web
+        env:
+          RUSTFLAGS: '--cfg=web_sys_unstable_apis --cfg getrandom_backend="wasm_js"'
+        run: wasm-pack test --headless --chrome -- --features server_build,browser_tests

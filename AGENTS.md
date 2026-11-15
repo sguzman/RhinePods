@@ -18,9 +18,12 @@ Before changing code, read [docs/RHINEPODS_WORKFLOW.md](docs/RHINEPODS_WORKFLOW.
 - Upstream releases/security patches are valuable. Fetch upstream, inspect
   the diff and migration requirements, integrate safely, and verify the
   changes alongside RhinePods modifications. See the workflow document.
-- **Current scope: finish browser Media Session/MPRIS episode metadata
-  (title, podcast name, creator, artwork) before starting any other feature.**
-  Do not implement unrelated podcast, UI, download, queue, or sync features.
+- **The original browser Media Session/MPRIS title and podcast-name milestone
+  was accepted after live Firefox/Waybar verification (2026-11-14).**
+  Further artist/artwork reliability remains separate follow-up work and is
+  not a freeze on unrelated features. New work starts on isolated feature
+  branches and requires its own evidence and acceptance; passing CI alone
+  is not live verification.
 - Production deployment is a different repository:
   `sguzman/my-srv` under `services/pinepods/`. Waybar integration is
   `sguzman/config-store` under `waybar/`. Do not change either as a side

@@ -1,5 +1,26 @@
 # RhinePods development, branching and upstream workflow
 
+## November 15, 2026 — Library investigation closeout and feature readiness
+
+- Bloomberg Businessweek ID 115 was subscribed and present in the live API
+  (5,587 episodes). Omny artwork says "Bloomberg Businessweek Daily" while
+  the canonical subscription name is "Bloomberg Businessweek".
+  Grid CSS hid the canonical title until hover; the subscription was not lost.
+- A separate controlled Yew browser regression reproduced stale 120-second
+  podcast-list caching after a successful custom subscription. Fixing the
+  stale cache is useful but **not proven** to have caused the original complaint.
+- Library fixes are integrated separately from r4 MPRIS artist/artwork
+  follow-ups and local r5 Docker overlay packaging. No server, database or
+  container change follows from source integration.
+- The original MPRIS title/podcast-name milestone was accepted live on
+  November 14. Missing artwork for some episodes remains unresolved,
+  but **does not block unrelated feature development**.
+- Production r5 uses a different compatibility patch lineage. Do not assume
+  that rebuilding main reproduces the exact r5 frontend; review differences
+  before any future deployment.
+
+---
+
 ## Final Firefox/MPRIS acceptance — 2026-11-14
 
 - The metadata feature **works live** with the 0.9.2-compatible r3 image.
@@ -175,9 +196,9 @@ Do not enable, manually dispatch, or modify those publication workflows
 to push a Rhino/RhinePods image without separate review and permission.
 Local Docker image builds need **no Docker Hub login**.
 
-## Current feature: rich web browser media metadata
+## Historical milestone: rich web browser media metadata
 
-**Only active feature until finished:**
+**Original scope (title/podcast-name portion accepted live; artwork follow-up is separate):**
 - Publish the *real* episode title, podcast name, creator and episode/chapter
   artwork to browser Media Session metadata in the Rust/Yew web player.
 - Ensure Firefox/Linux MPRIS reports meaningful `xesam:title`,
@@ -186,8 +207,9 @@ Local Docker image builds need **no Docker Hub login**.
   synchronization or the existing media element.
 - Verify Rust/Trunk build, test Firefox `playerctl metadata` with a real
   episode, then review the visual result in Waybar.
-- No cover thumbnail in Waybar, queue changes, downloads redesign, or
-  other unrelated features until this is finished.
+- The initial freeze on unrelated feature work has ended following
+  accepted live title/podcast metadata. New work still requires isolated
+  branches, review and tests.
 - Source-only changes do **not** modify the running self-hosted instance.
   Its PinePods container and database must remain untouched without
   separate informed approval.
@@ -225,9 +247,9 @@ Local Docker image builds need **no Docker Hub login**.
   Media Session regression tests also passed. A separate PinePods 0.9.2
   compatibility build succeeded in run `43643575697` with an approximately
   6 MB compressed frontend. No local Rust/Docker toolchain downloads needed.
-- **Still pending:** real Firefox/MPRIS `playerctl metadata` verification on
-  eosbox after an explicitly approved deployment. Do not merge into RhinePods
-  `main` until runtime behavior is verified.
+- **Historical note, now resolved:** Firefox/MPRIS live verification was
+  pending at this stage. The successful r3 title/podcast-name acceptance
+  is documented at the top of this file.
 - Keep the existing `my-srv` 0.9.2 experimental patch dormant; do not
   accidentally deploy it as a substitute for the reviewed RhinePods branch.
 - **Compatibility guard discovered 2026-11-14:** upstream `main` is 44 commits
