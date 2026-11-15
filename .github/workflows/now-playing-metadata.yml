@@ -1,0 +1,29 @@
+name: RhinePods — generic now-playing metadata checks
+
+# Build/test only; no Docker publish, release, deployment or secrets.
+on:
+  push:
+    branches:
+      - feature/now-playing-metadata
+    paths:
+      - "rust-api/**"
+      - "web/**"
+      - ".github/workflows/now-playing-metadata.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  rust-api:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.99.0
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust-api
+      - name: Type-check server and test targets
+        working-directory: rust-api
+        run: cargo check --locked --all-targets
