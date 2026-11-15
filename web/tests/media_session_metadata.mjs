@@ -11,7 +11,15 @@ const mainSource = fs.readFileSync(fileURLToPath(new URL("../src/main.rs", impor
 // The previous player-unmount cleanup erased metadata during navigation.
 assert.match(source, /#\[function_component\(MediaSessionBridge\)\]/);
 assert.match(source, /use_selector\(\|state: &UIState\|/);
-assert.match(source, /state\.audio_playing\.unwrap_or\(false\)/);
+// No play/pause dependency: republishing the same artwork on every toggle
+// can drop mpris:artUrl in some Firefox versions.
+assert.doesNotMatch(source.slice(source.indexOf("pub fn media_session_bridge"), source.indexOf("#[derive(Properties")), /state\\.audio_playing/);
+
+// Empty RSS feed author falls back to the podcast title, and missing episode
+// artwork falls back to feed artwork before emitting MediaMetadata.
+assert.match(source, /current\\.episode\\.author\\.trim\\(\\)/);
+assert.match(source, /"" => album\\.clone\\(\\)/);
+assert.match(source, /current\\.episode\\.artworkurl\\.as_str\\(\\)/);
 assert.match(source, /rhinepods_set_media_metadata\(title, artist, album, artwork\)/);
 assert.match(mainSource, /<MediaSessionBridge \/>/);
 assert.doesNotMatch(source, /use_effect_with\(\(\), \|_\| \|\| rhinepods_clear_media_metadata\(\)\)/);
