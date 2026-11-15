@@ -66,3 +66,46 @@ This branch is investigation-only. Neither the Docker server nor the
 frontend running on eosbox has been changed. Browser tests and exact-0.9.2
 frontend build are GitHub Actions only. Do not merge or deploy merely
 because the patch compiles; wait for green tests and real acceptance QA.
+
+## Verified remote results and optional r5 image candidate
+
+The original browser regression **failed** with ID 115 missing after
+navigate-away/return (run `43730615955`). The same real Yew browser test
+**passed** after invalidating the successful-add cache (run `43730806101`).
+The independent 110-podcast search regression also passed.
+
+The exact upstream 0.9.2 patch chain **compiled successfully**:
+<https://github.com/sguzman/RhinePods/actions/runs/43730927772>
+
+- Compatibility artifact: `rhinepods-web-pinepods-092-library-test`
+- Tar member: `rhinepods-web-pinepods-0.9.2-library.tar.gz`
+- Tar SHA-256: `21ad07ddb954af1501bff58b9acc4bb484294831510ad4091726703a65395346`
+- Compressed tar: 5,966,739 bytes (about 5.7 MiB)
+- Artifact ZIP: approximately 5.9 MiB, expires 2026-11-22
+- **Optional local image tag:** `local/rhinepods:pinepods-0.9.2-library-43730927772-r5`
+
+`scripts/build-092-prebuilt.fish` on **this feature branch** now pins that
+artifact, verifies its SHA-256, builds offline from the already-cached official
+0.9.2 Docker image, and smoke-tests Nginx in a disposable no-network
+container. It does **not** replace the running PinePods service.
+
+`scripts/overlay-092-prebuilt.yaml` is an **opt-in image-only** Docker
+Compose overlay pointing at r5. Do not invoke Compose until the user explicitly
+approves deployment. The original r3 container, server API, PostgreSQL, Valkey,
+volumes, player controls, and original base image are not modified by GitHub
+development or image preparation.
+
+### Real acceptance still required
+
+Only after a separately approved frontend cutover:
+- Verify real Firefox session load without stale mixed JS/WASM assets.
+- Open Podcasts and search for exact **Bloomberg Businessweek** (ID 115).
+- Navigate to another app section and back; confirm it remains visible.
+- Verify episode import state separately (a successful add doesn't necessarily
+  mean that every historical episode was imported).
+- Verify Waybar, playback, and currently subscribed podcasts are unaffected.
+- Roll back to the prior Compose image if regression occurs.
+
+The test demonstrates and fixes a **reproducible** frontend cache-loss path;
+it does not prove every missing-item symptom on the user's machine had this
+single cause. No live deployment has been performed.
