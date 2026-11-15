@@ -6,6 +6,7 @@ on:
   push:
     branches:
       - feature/media-session-metadata
+      - fix/media-artwork-artist
     paths:
       - "web/**"
       - ".github/workflows/media-session-web.yml"
