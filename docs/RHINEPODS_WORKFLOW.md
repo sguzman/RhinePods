@@ -1,5 +1,40 @@
 # RhinePods development, branching and upstream workflow
 
+## Current MPRIS browser diagnosis and r3 fix (2026-11-14)
+
+- Original 0.9.2-compatible r1 image: 403 due to root-owned index.html mode
+  0600. Repaired r2 overlay passed isolated HTTP test, and the real server
+  rendered its UI at HTTP 200. It is the user's last known live custom image;
+  do not assume it was replaced unless explicitly shown in terminal output.
+- While an episode played, Firefox `navigator.mediaSession.metadata` was
+  `null`; playerctl and Waybar still showed generic `Pinepods`. Directly
+  assigning `new MediaMetadata` in browser console immediately appeared in
+  `playerctl` and Waybar. So browser APIs, Firefox/MPRIS and Waybar are
+  proven functional; remaining issue is the automatic web integration.
+- The first patch owned Media Session metadata inside per-route `AudioPlayer`
+  components and cleared metadata on their unmount, which can occur during
+  navigation while actual media continues playing. The new source patch
+  mounts one global `MediaSessionBridge` above `Switch<Route>`, subscribed
+  to playback state. It republishes when episode/artist/podcast/cover or
+  playing state changes, tracks chapter artwork, and clears only when
+  playback has no current episode. The root hook and absence of player-unmount
+  cleanup have static test assertions.
+- Two successful GitHub Actions compilations: current RhinePods branch
+  `43662925651`, and exact PinePods 0.9.2 backport `43662901995`. The
+  latter generated frontend tarball 5,968,823 bytes, SHA-256
+  `39d86bc9c529ae662367b66529c15c1c91a7e72e44ff93c569002720b430b0b3`.
+- Revised `scripts/build-092-prebuilt.fish` fetches only this ~6 MB bundle,
+  offline-builds `local/rhinepods:pinepods-0.9.2-metadata-43662901995-r3`
+  with readable Nginx frontend assets, and tests actual HTTP serving in an
+  isolated container without touching the running service. The Compose overlay
+  now targets r3. See `docs/RHINEPODS_092_TEST.md` for exact steps and rollback.
+- **Still unverified:** Firefox receiving auto-published metadata from the
+  new app-wide component after r3 deployment. Do not merge to `main` or
+  declare feature complete until live Firefox/Waybar behavior is confirmed.
+
+---
+
+
 ## Incident and repair — November 14, 2026
 
 - PinePods 0.9.2 compatible frontend compiled and packaged, but first
