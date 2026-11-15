@@ -429,6 +429,13 @@ pub fn podcasts() -> Html {
                     let _dispatch = effect_dispatch.clone();
 
                     wasm_bindgen_futures::spawn_local(async move {
+                        // Subscriptions can change in another client while this tab is
+                        // open. Always refresh on library entry rather than replay the
+                        // previous route's 120-second in-memory response.
+                        crate::requests::cache::invalidate_prefix(&format!(
+                            "{}/api/data/return_pods/{}",
+                            server_name, user_id
+                        ));
                         match pod_req::call_get_podcasts_extra(&server_name, &api_key, &user_id)
                             .await
                         {

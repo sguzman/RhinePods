@@ -388,6 +388,43 @@ async fn a_successful_custom_subscription_survives_returning_to_the_library() {
     sign_out();
 }
 
+
+#[wasm_bindgen_test]
+async fn a_subscription_added_outside_this_tab_appears_on_next_library_visit() {
+    // Opening the library once caches the old response.
+    answer_api_with(json!({
+        "/api/data/return_pods/2": {
+            "pods": [podcast_fixture(116, "Bloomberg Businessweek Daily")]
+        }
+    }));
+    sign_in();
+    let (root, app) = render(Page::Podcasts).await;
+    assert!(!podcast_grid_titles(&root).iter().any(|t| t == "Bloomberg Businessweek"));
+    close(root, app);
+
+    // A different app or server-side sync adds ID 115; no custom-feed POST
+    // in this tab can invalidate its original 120-second cached GET.
+    let new_pod = podcast_fixture(115, "Bloomberg Businessweek").to_string();
+    js_sys::eval(&format!(
+        "window.__api['/api/data/return_pods/2'].pods.push({new_pod});"
+    )).unwrap();
+
+    // Simulate navigation back WITHOUT render() clearing the cache.
+    let document = web_sys::window().unwrap().document().unwrap();
+    let next_root = document.create_element("div").unwrap();
+    document.body().unwrap().append_child(&next_root).unwrap();
+    let next_app = yew::Renderer::<Harness>::with_root_and_props(
+        next_root.clone(), HarnessProps { page: Page::Podcasts }
+    ).render();
+    TimeoutFuture::new(200).await;
+
+    let titles = podcast_grid_titles(&next_root);
+    assert!(titles.iter().any(|t| t == "Bloomberg Businessweek"),
+        "library re-entry must fetch server changes instead of a cached list: {titles:?}");
+    close(next_root, next_app);
+    sign_out();
+}
+
 // Signing in.
 
 async fn set_input(input: &web_sys::HtmlInputElement, value: &str) {

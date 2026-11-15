@@ -109,3 +109,17 @@ Only after a separately approved frontend cutover:
 The test demonstrates and fixes a **reproducible** frontend cache-loss path;
 it does not prove every missing-item symptom on the user's machine had this
 single cause. No live deployment has been performed.
+
+## Follow-up after r5 live deployment — 2026-11-15
+
+- The owner confirmed `local/rhinepods:pinepods-0.9.2-library-43730927772-r5` is now running and HTTP health returned 200.
+- Despite r5, the visible library search still omitted Bloomberg Businessweek ID 115.
+- A read-only authenticated GET of `/api/data/return_pods/3` returned 110 podcasts, including ID 115 (`Bloomberg Businessweek`, 5,587 episodes, no favorite, empty categories). No database repair or resubscription is justified.
+- The earlier screenshot reportedly showed `Bloomberg Businessweek Daily`, which is absent from the four `business`-matching titles in that server response. Verify that the screenshot/search is on **Podcasts**, not **Discover**, and that it uses the same account and current JS/WASM.
+- The library's selected category chips legitimately exclude an uncategorized show, so `Clear All` is a non-destructive first UI check. Do not automatically assign a category to ID 115 without user intent.
+
+### Additional regression and candidate source change
+
+- The original r5 invalidation runs only after a successful **in-tab custom-feed POST**; a subscription added by another device, server sync, or another route can still be missed for the request cache's 120-second TTL.
+- The new browser regression mounts the real Podcasts page with an old list, simulates an out-of-tab server-side subscription, and remounts without clearing the request cache. The library page now explicitly invalidates its own cached subscriptions GET before loading so the fresh server list can reach the UI. The exact 0.9.2 compatibility patch includes the same isolated change.
+- This is a **candidate additional safeguard, not proof of the user's live UI root cause**. GitHub Actions and real QA must pass before any image changes. The deployed r5 remains untouched by repository commits.
