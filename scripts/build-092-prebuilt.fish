@@ -5,11 +5,11 @@
 # With an argument, accepts the manually downloaded artifact ZIP or tar.gz.
 
 set -l expected_base "madeofpendletonwool/pinepods:0.9.2"
-set -l image_tag "local/rhinepods:pinepods-0.9.2-metadata-43643575697"
-set -l run_id "43643575697"
+set -l image_tag "local/rhinepods:pinepods-0.9.2-metadata-43662901995-r3"
+set -l run_id "43662901995"
 set -l artifact_name "rhinepods-web-pinepods-0.9.2-metadata"
 set -l archive_name "rhinepods-web-pinepods-0.9.2.tar.gz"
-set -l archive_sha256 "0c47286c155b86148e94fff0bacc3595d6042cab8c2907d6b3d22cec50ba905e"
+set -l archive_sha256 "39d86bc9c529ae662367b66529c15c1c91a7e72e44ff93c569002720b430b0b3"
 set -l here (realpath (dirname (status filename)))
 
 function fail -a message
@@ -31,8 +31,10 @@ docker image inspect "$expected_base" >/dev/null 2>/dev/null
 or fail "Official 0.9.2 base image is not cached. No Docker pull will be attempted."
 
 set -l running_image (docker inspect --format '{{.Config.Image}}' pinepods 2>/dev/null)
-if test "$running_image" != "$expected_base"
-    fail "Running pinepods image is '$running_image', expected '$expected_base'. Refusing to proceed."
+# Allow either the original 0.9.2 image or our previous tested r2 overlay.
+# Rebuild from the cached official image regardless of which one is live.
+if not contains -- "$running_image" "$expected_base" "local/rhinepods:pinepods-0.9.2-metadata-43643575697-perms-r2"
+    fail "Unexpected running PinePods image '$running_image'; refusing to proceed."
 end
 
 if docker image inspect "$image_tag" >/dev/null 2>/dev/null
@@ -88,6 +90,24 @@ or fail "local Docker overlay failed; running service was not changed"
 docker image inspect "$image_tag" >/dev/null
 or fail "the local image was not created"
 
-printf '\nSuccessfully created %s\n' "$image_tag"
+# Frontend smoke test must actually serve HTTP 200, not merely pass API health.
+# A previous artifact's index.html had mode 0600 and Nginx served HTTP 403.
+echo "Checking Nginx HTML/CSS access in an isolated, no-network container..."
+docker run --rm --network none --entrypoint /bin/sh "$image_tag" -ec '
+    set -eu
+    su-exec nginx:nginx sh -c "test -r /var/www/html/index.html"
+    mkdir -p /run/nginx /var/lib/nginx/tmp /var/log/nginx
+    chown -R nginx:nginx /run/nginx /var/lib/nginx /var/log/nginx
+    nginx -t
+    nginx
+    curl --fail --silent --show-error --max-time 10 http://127.0.0.1:8040/ -o /tmp/rhinepods-index.html
+    test -s /tmp/rhinepods-index.html
+    grep -q "<title>Pinepods</title>" /tmp/rhinepods-index.html
+    curl --fail --silent --show-error --max-time 10 http://127.0.0.1:8040/static/styles.css -o /dev/null
+    echo "PASS: Nginx serves RhinePods HTML and CSS over HTTP"
+'
+or fail "isolated Nginx HTTP test failed. DO NOT deploy this image"
+
+printf '\nSuccessfully built and HTTP-verified %s\n' "$image_tag"
 echo "No running container, Compose config, database, or service was changed."
 echo "See docs/RHINEPODS_092_TEST.md for read-only preflight and approval-gated cutover."
