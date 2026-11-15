@@ -5,6 +5,17 @@ import vm from "node:vm";
 import { fileURLToPath } from "node:url";
 
 const source = fs.readFileSync(fileURLToPath(new URL("../src/components/audio.rs", import.meta.url)), "utf8");
+const mainSource = fs.readFileSync(fileURLToPath(new URL("../src/main.rs", import.meta.url)), "utf8");
+
+// The metadata observer must be mounted once above route-specific AudioPlayers.
+// The previous player-unmount cleanup erased metadata during navigation.
+assert.match(source, /#\[function_component\(MediaSessionBridge\)\]/);
+assert.match(source, /use_selector\(\|state: &UIState\|/);
+assert.match(source, /state\.audio_playing\.unwrap_or\(false\)/);
+assert.match(source, /rhinepods_set_media_metadata\(title, artist, album, artwork\)/);
+assert.match(mainSource, /<MediaSessionBridge \/>/);
+assert.doesNotMatch(source, /use_effect_with\(\(\), \|_\| \|\| rhinepods_clear_media_metadata\(\)\)/);
+
 const match = source.match(/#\[wasm_bindgen\(inline_js = r#"([\s\S]*?)"#\)\]/);
 assert.ok(match, "RhinePods Media Session JS declaration missing");
 const moduleCode = match[1].replaceAll("export function ", "function ") +
